@@ -3,7 +3,7 @@
    Uses Chart.js (loaded via CDN in admin.html)
    ============================================================ */
 
-const API = 'http://localhost:8000';
+const API = window.location.origin;
 
 // ─── State ────────────────────────────────────────────────────
 let routes = [];

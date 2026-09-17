@@ -2,7 +2,7 @@
    passenger.js — Passenger Feedback Portal Logic
    ============================================================ */
 
-const API = 'http://localhost:8000';
+const API = window.location.origin;
 
 // ─── Star rating descriptors ──────────────────────────────────
 const STAR_LABELS = {
@@ -59,7 +59,7 @@ async function checkApiHealth() {
   } catch {
     badge.className = 'api-status offline';
     text.textContent = 'API Offline';
-    showToast('Backend not reachable. Start the server at localhost:8000', 'error');
+    showToast('Backend not reachable. Please try again.', 'error');
   }
 }
 
