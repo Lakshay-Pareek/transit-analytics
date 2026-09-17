@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TransitVoice — NYC Bus Transit Feedback</title>
+  <meta name="description" content="Submit ratings and feedback about your NYC MTA bus experience. Help improve public transport for everyone." />
+  <link rel="stylesheet" href="css/style.css?v=5" />
+  <style>
+    /* SVG icon helper */
+    .icon-wrap {
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--brand-pale);
+      border-radius: var(--radius-md);
+      flex-shrink: 0;
+      color: var(--brand);
+    }
+    .icon-wrap svg { width: 16px; height: 16px; }
+
+    .feature-icon svg { width: 28px; height: 28px; }
+
+    /* Logo mark — simple wordmark, no icon box */
+    .nav-logo-mark {
+      display: flex; align-items: center; gap: 4px;
+    }
+    .logo-wordmark {
+      font-size: 1.25rem; font-weight: 800; color: #fff;
+      letter-spacing: -0.04em;
+    }
+    .logo-wordmark span { font-weight: 300; opacity: 0.75; }
+
+    /* Card title without icon */
+    .card-title-plain {
+      font-size: 0.95rem; font-weight: 700; color: var(--gray-800);
+    }
+
+    /* AI classify label without robot */
+    .ai-label-text {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--brand);
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Navigation ──────────────────────────────────────────── -->
+<nav class="navbar">
+  <div class="container navbar-inner">
+    <a href="/" class="nav-logo">
+      <div class="nav-logo-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="4" y="3" width="16" height="15" rx="3"/>
+          <path d="M4 11h16"/>
+          <path d="M8 15h.01M16 15h.01"/>
+          <path d="M6 18v2M18 18v2"/>
+        </svg>
+      </div>
+      <div class="nav-logo-text">
+        <span class="nav-logo-title">TransitVoice</span>
+        <span class="nav-logo-dept">NYC MTA Feedback</span>
+      </div>
+    </a>
+
+    <ul class="nav-links">
+      <li><a href="/" class="active">Submit Feedback</a></li>
+      <li><a href="/admin">Analytics Dashboard</a></li>
+      <li><a href="/api/docs" target="_blank">API Docs</a></li>
+    </ul>
+
+    <div class="nav-right">
+      <div class="api-status checking" id="api-status-badge">
+        <div class="api-status-dot"></div>
+        <span id="api-status-text">Connecting…</span>
+      </div>
+      <a href="/admin" class="btn btn-white btn-sm nav-admin-btn">Admin</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Hero with embedded feedback form ──────────────────────── -->
+<section class="hero">
+  <div class="hero-bg" id="hero-bg"></div>
+  <div class="hero-overlay"></div>
+
+  <div class="hero-content container">
+    <div class="hero-text">
+      <div class="hero-eyebrow">
+        <div class="live-dot"></div>
+        Live Feedback System · NYC MTA
+      </div>
+      <h1>Your Voice<br>Shapes Better<br>Transit</h1>
+      <p class="hero-sub">
+        Rate your NYC bus experience and help the MTA fix
+        what matters most — for every commuter in the city.
+      </p>
+    </div>
+
+    <!-- ── FORM CARD ── -->
+    <div class="feedback-card" id="feedback-form">
+
+      <div class="feedback-card-tabs">
+        <button class="fcard-tab active">Rate My Trip</button>
+        <button class="fcard-tab" style="cursor:default;opacity:0.45">Track Route</button>
+        <button class="fcard-tab" style="cursor:default;opacity:0.45">Report Issue</button>
+      </div>
+
+      <div class="steps-bar" id="step-progress">
+        <div class="step-item active" id="step-1">
+          <div class="step-bubble">1</div>
+          <div class="step-label">Route</div>
+        </div>
+        <div class="step-item" id="step-2">
+          <div class="step-bubble">2</div>
+          <div class="step-label">Ratings</div>
+        </div>
+        <div class="step-item" id="step-3">
+          <div class="step-bubble">3</div>
+          <div class="step-label">Comment</div>
+        </div>
+        <div class="step-item" id="step-4">
+          <div class="step-bubble">4</div>
+          <div class="step-label">Submit</div>
+        </div>
+      </div>
+
+      <form id="feedback-form-inner" novalidate>
+
+        <!-- Step 1: Route -->
+        <div class="form-group" style="margin-bottom:var(--space-5)">
+          <label class="form-label" for="route-select">Select Your Bus Route</label>
+          <select class="form-control" id="route-select" style="font-size:1rem;padding:13px 16px">
+            <option value="">Loading routes…</option>
+          </select>
+        </div>
+
+        <!-- Route info -->
+        <div id="route-info" class="route-info-card hidden">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:var(--space-3);">
+            <div>
+              <span class="route-number-badge" id="ri-number">—</span>
+              <span style="color:var(--gray-600);margin-left:8px;font-size:0.9rem" id="ri-name">—</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="score-badge score-good" id="ri-score">—</span>
+              <span class="badge badge-blue" id="ri-borough">—</span>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:var(--space-3);">
+            <span id="ri-rating-stars">☆☆☆☆☆</span>
+            <span style="font-weight:700;color:var(--gray-800)" id="ri-rating-value">—</span>
+            <span style="color:var(--gray-400);font-size:0.78rem">overall rating</span>
+          </div>
+          <div class="route-stats-grid">
+            <div class="route-stat"><div class="route-stat-value" id="ri-top-issue">—</div><div class="route-stat-label">Top Issue</div></div>
+            <div class="route-stat"><div class="route-stat-value" id="ri-second-issue">—</div><div class="route-stat-label">2nd Issue</div></div>
+            <div class="route-stat"><div class="route-stat-value" style="font-size:0.8rem" id="ri-worst-period">—</div><div class="route-stat-label">Worst Period</div></div>
+            <div class="route-stat"><div class="route-stat-value" id="ri-complaints">—</div><div class="route-stat-label">Complaints/Mo</div></div>
+            <div class="route-stat"><div class="route-stat-value" id="ri-total">—</div><div class="route-stat-label">Total Feedback</div></div>
+          </div>
+        </div>
+
+        <!-- Step 2: Ratings -->
+        <div class="section-card" id="card-ratings">
+          <div class="card-header">
+            <div class="card-title-plain">Rate Your Experience</div>
+            <span class="step-chip">Step 2</span>
+          </div>
+
+          <!-- Overall -->
+          <div class="rating-row">
+            <div class="rating-label">
+              Overall Trip Experience <span class="rating-required">*</span>
+            </div>
+            <div style="display:flex;align-items:center;">
+              <div class="star-group" id="stars-overall">
+                <input type="radio" id="ov5" name="overall" value="5"/><label for="ov5" title="5 — Excellent">★</label>
+                <input type="radio" id="ov4" name="overall" value="4"/><label for="ov4" title="4 — Good">★</label>
+                <input type="radio" id="ov3" name="overall" value="3"/><label for="ov3" title="3 — Average">★</label>
+                <input type="radio" id="ov2" name="overall" value="2"/><label for="ov2" title="2 — Poor">★</label>
+                <input type="radio" id="ov1" name="overall" value="1"/><label for="ov1" title="1 — Terrible">★</label>
+              </div>
+              <span class="star-value-label" id="lbl-overall"></span>
+            </div>
+          </div>
+
+          <!-- Punctuality -->
+          <div class="rating-row">
+            <div class="rating-label">
+              Punctuality &amp; Schedule
+            </div>
+            <div style="display:flex;align-items:center;">
+              <div class="star-group" id="stars-punctuality">
+                <input type="radio" id="pu5" name="punctuality" value="5"/><label for="pu5" title="5 — Always on time">★</label>
+                <input type="radio" id="pu4" name="punctuality" value="4"/><label for="pu4" title="4 — Usually on time">★</label>
+                <input type="radio" id="pu3" name="punctuality" value="3"/><label for="pu3" title="3 — Sometimes late">★</label>
+                <input type="radio" id="pu2" name="punctuality" value="2"/><label for="pu2" title="2 — Often late">★</label>
+                <input type="radio" id="pu1" name="punctuality" value="1"/><label for="pu1" title="1 — Always late">★</label>
+              </div>
+              <span class="star-value-label" id="lbl-punctuality"></span>
+            </div>
+          </div>
+
+          <!-- Cleanliness -->
+          <div class="rating-row">
+            <div class="rating-label">
+              Cleanliness &amp; Condition
+            </div>
+            <div style="display:flex;align-items:center;">
+              <div class="star-group" id="stars-cleanliness">
+                <input type="radio" id="cl5" name="cleanliness" value="5"/><label for="cl5" title="5 — Spotless">★</label>
+                <input type="radio" id="cl4" name="cleanliness" value="4"/><label for="cl4" title="4 — Clean">★</label>
+                <input type="radio" id="cl3" name="cleanliness" value="3"/><label for="cl3" title="3 — Acceptable">★</label>
+                <input type="radio" id="cl2" name="cleanliness" value="2"/><label for="cl2" title="2 — Dirty">★</label>
+                <input type="radio" id="cl1" name="cleanliness" value="1"/><label for="cl1" title="1 — Very dirty">★</label>
+              </div>
+              <span class="star-value-label" id="lbl-cleanliness"></span>
+            </div>
+          </div>
+
+          <!-- Crowding -->
+          <div class="rating-row">
+            <div class="rating-label">
+              Crowding &amp; Onboard Space
+            </div>
+            <div style="display:flex;align-items:center;">
+              <div class="star-group" id="stars-crowding">
+                <input type="radio" id="cr5" name="crowding" value="5"/><label for="cr5" title="5 — Plenty of space">★</label>
+                <input type="radio" id="cr4" name="crowding" value="4"/><label for="cr4" title="4 — Comfortable">★</label>
+                <input type="radio" id="cr3" name="crowding" value="3"/><label for="cr3" title="3 — A bit crowded">★</label>
+                <input type="radio" id="cr2" name="crowding" value="2"/><label for="cr2" title="2 — Very crowded">★</label>
+                <input type="radio" id="cr1" name="crowding" value="1"/><label for="cr1" title="1 — Packed">★</label>
+              </div>
+              <span class="star-value-label" id="lbl-crowding"></span>
+            </div>
+          </div>
+
+          <!-- Driver -->
+          <div class="rating-row">
+            <div class="rating-label">
+              Driver &amp; Operator Courtesy
+            </div>
+            <div style="display:flex;align-items:center;">
+              <div class="star-group" id="stars-driver">
+                <input type="radio" id="dr5" name="driver" value="5"/><label for="dr5" title="5 — Excellent">★</label>
+                <input type="radio" id="dr4" name="driver" value="4"/><label for="dr4" title="4 — Good">★</label>
+                <input type="radio" id="dr3" name="driver" value="3"/><label for="dr3" title="3 — Average">★</label>
+                <input type="radio" id="dr2" name="driver" value="2"/><label for="dr2" title="2 — Poor">★</label>
+                <input type="radio" id="dr1" name="driver" value="1"/><label for="dr1" title="1 — Very poor">★</label>
+              </div>
+              <span class="star-value-label" id="lbl-driver"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3: Comment -->
+        <div class="section-card" id="card-comment">
+          <div class="card-header">
+            <div class="card-title-plain">Additional Comments</div>
+            <span class="step-chip">Optional</span>
+          </div>
+
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label" for="comment">Describe your experience</label>
+            <textarea
+              class="form-control"
+              id="comment"
+              name="comment"
+              rows="3"
+              maxlength="2000"
+              placeholder="e.g. The bus was always packed after 6 PM and the driver skipped our stop twice…"
+            ></textarea>
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:8px;">
+              <div id="classify-result" class="classify-preview hidden">
+                <div>
+                  <div class="ai-label-text">Auto-Classify</div>
+                  <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+                    <span id="classify-category" class="badge badge-orange"></span>
+                    <span id="classify-severity" class="badge sev-low"></span>
+                    <span id="classify-conf" style="color:var(--gray-400);font-size:0.72rem"></span>
+                  </div>
+                </div>
+              </div>
+              <span style="color:var(--gray-400);font-size:0.72rem;white-space:nowrap;">
+                <span id="char-count">0</span>/2000
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Submit -->
+        <div style="padding:0 0 var(--space-8);">
+          <button type="submit" class="btn btn-primary btn-lg" id="submit-btn"
+            style="width:100%;font-size:1rem;padding:15px;border-radius:var(--radius-xl);">
+            <span>Submit Feedback</span>
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+              <path d="M9 3.75L14.25 9 9 14.25M3.75 9h10.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <p style="text-align:center;margin-top:12px;color:var(--gray-400);font-size:0.78rem">
+            All submissions are anonymous and help improve NYC bus service.
+          </p>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- ── Stats Banner ─────────────────────────────────────────── -->
+<section class="stats-banner">
+  <div class="container">
+    <div class="stats-grid">
+      <div>
+        <div class="stat-value" id="stat-feedback">—</div>
+        <div class="stat-label">Feedback Submitted</div>
+      </div>
+      <div>
+        <div class="stat-value" id="stat-routes">—</div>
+        <div class="stat-label">Routes Monitored</div>
+      </div>
+      <div>
+        <div class="stat-value" id="stat-rating">—</div>
+        <div class="stat-label">Avg Rating / 5</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Feature Cards ─────────────────────────────────────────── -->
+<section class="features-section">
+  <div class="container">
+    <div style="text-align:center;margin-bottom:var(--space-12)">
+      <h2 style="font-size:1.75rem;margin-bottom:var(--space-3)">Why Your Feedback Matters</h2>
+      <p style="max-width:520px;margin:0 auto;color:var(--gray-500)">
+        Every submission is analyzed and sent directly to operations teams to improve service across all routes.
+      </p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 6v6l4 2"/><path d="M18 2l4 4-4 4"/><path d="M22 2v4h-4"/></svg>
+        </div>
+        <div class="feature-title">Smart Classification</div>
+        <p class="feature-desc">Your feedback is automatically categorised and prioritised in real-time using machine learning.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><path d="M2 20h20"/></svg>
+        </div>
+        <div class="feature-title">Live Analytics</div>
+        <p class="feature-desc">Operations teams see complaint trends, route rankings, and deterioration alerts updated in real-time.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <div class="feature-title">Fully Anonymous</div>
+        <p class="feature-desc">No personal data is collected. Your feedback is private and only used to improve transit service.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <div class="feature-title">Instant Impact</div>
+        <p class="feature-desc">Deteriorating routes are flagged immediately, helping operators act before problems escalate.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Footer ────────────────────────────────────────────────── -->
+<footer>
+  <div class="container">
+    <p style="margin-bottom:6px;font-weight:600;color:rgba(255,255,255,0.8)">TransitVoice — NYC Public Transport Feedback &amp; Analytics</p>
+    <p>
+      Data sourced from
+      <a href="https://catalog.data.gov/dataset/311-service-requests-from-2010-to-present" target="_blank">NYC 311 Open Data</a>
+      &nbsp;·&nbsp;
+      <a href="/admin">Admin Dashboard</a>
+      &nbsp;·&nbsp;
+      <a href="/api/docs" target="_blank">API Docs</a>
+    </p>
+  </div>
+</footer>
+
+<!-- ── Success Modal ─────────────────────────────────────────── -->
+<div class="modal-overlay hidden" id="success-modal">
+  <div class="modal-box">
+    <div class="modal-icon">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--success)"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <h2 style="margin-bottom:8px;font-size:1.4rem">Feedback Submitted</h2>
+    <p style="color:var(--gray-500);margin-bottom:var(--space-6);font-size:0.875rem;line-height:1.6">
+      Thank you. Your feedback has been recorded and classified automatically.
+    </p>
+    <div class="modal-detail-row">
+      <span style="color:var(--gray-500)">Category</span>
+      <span id="modal-category" class="badge badge-orange">—</span>
+    </div>
+    <div class="modal-detail-row">
+      <span style="color:var(--gray-500)">Severity</span>
+      <span id="modal-severity" class="badge sev-low">—</span>
+    </div>
+    <div class="modal-detail-row">
+      <span style="color:var(--gray-500)">Your Rating</span>
+      <span id="modal-rating" style="font-weight:800;color:var(--brand)">—</span>
+    </div>
+    <button class="btn btn-primary" id="close-modal" style="width:100%;margin-top:var(--space-6)">
+      Submit Another
+    </button>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const bg = document.getElementById('hero-bg');
+    if (bg) setTimeout(() => bg.classList.add('loaded'), 100);
+  });
+</script>
+<script src="js/passenger.js?v=5"></script>
+</body>
+</html>
